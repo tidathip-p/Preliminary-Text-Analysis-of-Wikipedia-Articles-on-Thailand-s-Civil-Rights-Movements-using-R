@@ -7,7 +7,7 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
-# Uncomment the next line to install all required packages
+# Install required packages
 # install.packages(c("rvest", "xml2", "dplyr", "tokenizers", "tm", 
 #                    "SnowballC", "topicmodels", "ggplot2", 
 #                    "tidyverse", "wordcloud", "sentimentr", "tidytext"))
