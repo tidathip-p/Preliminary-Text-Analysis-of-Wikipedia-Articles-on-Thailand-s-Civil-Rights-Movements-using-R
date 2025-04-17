@@ -4,14 +4,9 @@ author: "Tidathip Phommachan"
 output: html_document
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-
-# Install required packages
-# install.packages(c("rvest", "xml2", "dplyr", "tokenizers", "tm", 
-#                    "SnowballC", "topicmodels", "ggplot2", 
-#                    "tidyverse", "wordcloud", "sentimentr", "tidytext"))
-
+```{r, message=FALSE, warning=FALSE}
+# Install and load necessary packages
+install.packages(c("rvest", "xml2", "dplyr", "tokenizers", "tm", "SnowballC", "topicmodels", "ggplot2", "tidyverse", "wordcloud", "sentimentr", "tidytext"))
 library(rvest)
 library(xml2)
 library(dplyr)
@@ -25,7 +20,7 @@ library(wordcloud)
 library(sentimentr)
 library(tidytext)
 
-# Scrape Wikipedia Articles
+# Define URLs for the Wikipedia articles
 urls <- c(
   "https://en.wikipedia.org/wiki/1973_Thai_popular_uprising",
   "https://en.wikipedia.org/wiki/6_October_1976_massacre",
@@ -36,6 +31,7 @@ urls <- c(
   "https://en.wikipedia.org/wiki/2020%E2%80%932021_Thai_protests"
 )
 
+# Scraping content from the Wikipedia articles
 article_content <- list()
 
 for (url in urls) {
@@ -45,9 +41,10 @@ for (url in urls) {
   article_content[[url]] <- list(title = article_title, content = article_paragraphs)
 }
 
-print(article_content[[1]])
+# View scraped data
+print(article_content)
 
-# Clean and Tokenize Text
+# Data cleaning: remove stopwords and perform stemming
 cleaned_texts <- list()
 
 for (url in names(article_content)) {
@@ -61,9 +58,10 @@ for (url in names(article_content)) {
   cleaned_texts[[url]] <- list(title = article_content[[url]]$title, content = cleaned_text)
 }
 
-print(cleaned_texts[[1]])
+# View cleaned data
+print(cleaned_texts)
 
-# Create a Structured Data Frame
+# Convert cleaned data into a structured data frame
 structured_data <- data.frame(
   url = character(),
   title = character(),
@@ -82,31 +80,34 @@ for (url in names(cleaned_texts)) {
       stringsAsFactors = FALSE
     )
   )
-)
+}
 
-head(structured_data)
+# View structured data
+View(structured_data)
 
-# Generate Word Clouds
+# Function to generate and plot word clouds
 generate_wordcloud <- function(text, title) {
   word_freq <- table(unlist(strsplit(text, "\\s+")))
   wordcloud(words = names(word_freq), freq = word_freq, max.words = 100,
-            random.order = FALSE, colors = brewer.pal(8, "Dark2"))
-  title(main = title)
+            random.order = FALSE, colors = brewer.pal(8, "Dark2"),
+            main = title)
 }
 
-# Word clouds for each article
-par(mfrow = c(3, 3))  # Adjust layout as needed
+# Generate word clouds for each article
 for (i in 1:nrow(structured_data)) {
+  dev.new() 
   generate_wordcloud(structured_data$content[i], structured_data$title[i])
+  readline(prompt = "Press [enter] to see the next word cloud...")
 }
 
-# Sentiment Analysis
+# Create a custom function to perform sentiment analysis
 analyze_sentiment <- function(text) {
   sentences <- get_sentences(text)
   sentiment <- sentiment(sentences)
   return(sentiment)
 }
 
+# Analyze sentiment for each article
 sentiment_data <- list()
 
 for (url in names(cleaned_texts)) {
@@ -118,9 +119,10 @@ for (url in names(cleaned_texts)) {
   )
 }
 
-head(sentiment_data[[1]]$sentiment)
+# View sentiment data for the first article
+print(sentiment_data[[1]])
 
-# Aggregate Sentiment Scores
+# Create a data frame to store aggregated sentiment scores
 sentiment_scores <- data.frame(
   url = character(),
   title = character(),
@@ -141,13 +143,14 @@ for (url in names(sentiment_data)) {
       stringsAsFactors = FALSE
     )
   )
-)
+}
 
-sentiment_scores
+# View aggregated sentiment scores
+View(sentiment_scores)
 
-# Visualize Sentiment Scores
+# Plot the average sentiment scores for each article
 ggplot(sentiment_scores, aes(x = reorder(title, average_sentiment), y = average_sentiment)) +
-  geom_bar(stat = "identity", fill = "steelblue") +
+  geom_bar(stat = "identity") +
   coord_flip() +
   labs(title = "Average Sentiment Scores of Wikipedia Articles on Thai Civil Rights Movements",
        x = "Article Title",
