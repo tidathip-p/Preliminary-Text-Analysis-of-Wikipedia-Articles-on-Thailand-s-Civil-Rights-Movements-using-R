@@ -1,12 +1,17 @@
----
-title: "Preliminary Text Analysis of Wikipedia Articles on Thailand's Civil Rights Movements using R"
-author: "Tidathip Phommachan"
-output: html_document
----
+# Step 1: Data Scraping
 
-```{r, message=FALSE, warning=FALSE}
 # Install and load necessary packages
-install.packages(c("rvest", "xml2", "dplyr", "tokenizers", "tm", "SnowballC", "topicmodels", "ggplot2", "tidyverse", "wordcloud", "sentimentr", "tidytext"))
+install.packages(c("rvest",
+                   "xml2", 
+                   "dplyr", 
+                   "tokenizers", 
+                   "tm", 
+                   "SnowballC", 
+                   "topicmodels", 
+                   "ggplot2", 
+                   "tidyverse", 
+                   "wordcloud"))
+
 library(rvest)
 library(xml2)
 library(dplyr)
@@ -17,10 +22,8 @@ library(topicmodels)
 library(ggplot2)
 library(tidyverse)
 library(wordcloud)
-library(sentimentr)
-library(tidytext)
 
-# Define URLs for the Wikipedia articles
+# Define URLs
 urls <- c(
   "https://en.wikipedia.org/wiki/1973_Thai_popular_uprising",
   "https://en.wikipedia.org/wiki/6_October_1976_massacre",
@@ -31,7 +34,7 @@ urls <- c(
   "https://en.wikipedia.org/wiki/2020%E2%80%932021_Thai_protests"
 )
 
-# Scraping content from the Wikipedia articles
+# Data Scraping
 article_content <- list()
 
 for (url in urls) {
@@ -44,7 +47,8 @@ for (url in urls) {
 # View scraped data
 print(article_content)
 
-# Data cleaning: remove stopwords and perform stemming
+# Step 2: Data Cleaning and Preparation
+
 cleaned_texts <- list()
 
 for (url in names(article_content)) {
@@ -61,7 +65,7 @@ for (url in names(article_content)) {
 # View cleaned data
 print(cleaned_texts)
 
-# Convert cleaned data into a structured data frame
+# Convert to Data Frame
 structured_data <- data.frame(
   url = character(),
   title = character(),
@@ -85,7 +89,15 @@ for (url in names(cleaned_texts)) {
 # View structured data
 View(structured_data)
 
-# Function to generate and plot word clouds
+# Step 3: Visualisation and Analysis
+
+# 3.1 Word Cloud Generation
+
+# Install and load necessary package
+install.packages("wordcloud")
+library(wordcloud)
+
+# Create a function to generate and plot word clouds
 generate_wordcloud <- function(text, title) {
   word_freq <- table(unlist(strsplit(text, "\\s+")))
   wordcloud(words = names(word_freq), freq = word_freq, max.words = 100,
@@ -93,12 +105,24 @@ generate_wordcloud <- function(text, title) {
             main = title)
 }
 
-# Generate word clouds for each article
+# Generate and plot word clouds one by one
 for (i in 1:nrow(structured_data)) {
   dev.new() 
   generate_wordcloud(structured_data$content[i], structured_data$title[i])
   readline(prompt = "Press [enter] to see the next word cloud...")
 }
+
+# 3.2 Sentiment Analysis
+
+# 3.2.1 Install and Load Packages
+
+install.packages("sentimentr")
+install.packages("tidytext")
+
+library(sentimentr)
+library(tidytext)
+
+# 3.2.2 Perform Sentiment Analysis 
 
 # Create a custom function to perform sentiment analysis
 analyze_sentiment <- function(text) {
@@ -119,8 +143,10 @@ for (url in names(cleaned_texts)) {
   )
 }
 
-# View sentiment data for the first article
-print(sentiment_data[[1]])
+# View sentiment data 
+print(sentiment_data[[1]]) 
+
+# 3.2.3 Aggregate Sentiment Scores
 
 # Create a data frame to store aggregated sentiment scores
 sentiment_scores <- data.frame(
@@ -147,6 +173,12 @@ for (url in names(sentiment_data)) {
 
 # View aggregated sentiment scores
 View(sentiment_scores)
+
+# 3.2.4 Visualize Sentiment Scores 
+
+# Install and load necessary package
+install.packages("ggplot2")
+library(ggplot2)
 
 # Plot the average sentiment scores for each article
 ggplot(sentiment_scores, aes(x = reorder(title, average_sentiment), y = average_sentiment)) +
