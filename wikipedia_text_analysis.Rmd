@@ -1,0 +1,155 @@
+---
+title: "Preliminary Text Analysis of Wikipedia Articles on Thailand's Civil Rights Movements using R"
+author: "Tidathip Phommachan"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# Uncomment the next line to install all required packages
+# install.packages(c("rvest", "xml2", "dplyr", "tokenizers", "tm", 
+#                    "SnowballC", "topicmodels", "ggplot2", 
+#                    "tidyverse", "wordcloud", "sentimentr", "tidytext"))
+
+library(rvest)
+library(xml2)
+library(dplyr)
+library(tokenizers)
+library(tm)
+library(SnowballC)
+library(topicmodels)
+library(ggplot2)
+library(tidyverse)
+library(wordcloud)
+library(sentimentr)
+library(tidytext)
+
+# Scrape Wikipedia Articles
+urls <- c(
+  "https://en.wikipedia.org/wiki/1973_Thai_popular_uprising",
+  "https://en.wikipedia.org/wiki/6_October_1976_massacre",
+  "https://en.wikipedia.org/wiki/Black_May_(1992)",
+  "https://en.wikipedia.org/wiki/2006_Thai_coup_d%27%C3%A9tat",
+  "https://en.wikipedia.org/wiki/2010_Thai_political_protests",
+  "https://en.wikipedia.org/wiki/2014_Thai_coup_d%27%C3%A9tat",
+  "https://en.wikipedia.org/wiki/2020%E2%80%932021_Thai_protests"
+)
+
+article_content <- list()
+
+for (url in urls) {
+  webpage <- read_html(url)
+  article_title <- html_text(html_nodes(webpage, "h1"))
+  article_paragraphs <- html_text(html_nodes(webpage, "p"))
+  article_content[[url]] <- list(title = article_title, content = article_paragraphs)
+}
+
+print(article_content[[1]])
+
+# Clean and Tokenize Text
+cleaned_texts <- list()
+
+for (url in names(article_content)) {
+  paragraphs <- article_content[[url]]$content
+  text <- paste(paragraphs, collapse = " ")
+  tokens <- tokenize_words(text)
+  tokens <- unlist(tokens)
+  tokens <- tokens[!tokens %in% stopwords("en")]
+  tokens <- wordStem(tokens, language = "en")
+  cleaned_text <- paste(tokens, collapse = " ")
+  cleaned_texts[[url]] <- list(title = article_content[[url]]$title, content = cleaned_text)
+}
+
+print(cleaned_texts[[1]])
+
+# Create a Structured Data Frame
+structured_data <- data.frame(
+  url = character(),
+  title = character(),
+  content = character(),
+  stringsAsFactors = FALSE
+)
+
+for (url in names(cleaned_texts)) {
+  article <- cleaned_texts[[url]]
+  structured_data <- rbind(
+    structured_data,
+    data.frame(
+      url = url,
+      title = article$title,
+      content = article$content,
+      stringsAsFactors = FALSE
+    )
+  )
+)
+
+head(structured_data)
+
+# Generate Word Clouds
+generate_wordcloud <- function(text, title) {
+  word_freq <- table(unlist(strsplit(text, "\\s+")))
+  wordcloud(words = names(word_freq), freq = word_freq, max.words = 100,
+            random.order = FALSE, colors = brewer.pal(8, "Dark2"))
+  title(main = title)
+}
+
+# Word clouds for each article
+par(mfrow = c(3, 3))  # Adjust layout as needed
+for (i in 1:nrow(structured_data)) {
+  generate_wordcloud(structured_data$content[i], structured_data$title[i])
+}
+
+# Sentiment Analysis
+analyze_sentiment <- function(text) {
+  sentences <- get_sentences(text)
+  sentiment <- sentiment(sentences)
+  return(sentiment)
+}
+
+sentiment_data <- list()
+
+for (url in names(cleaned_texts)) {
+  article <- cleaned_texts[[url]]$content
+  sentiment <- analyze_sentiment(article)
+  sentiment_data[[url]] <- list(
+    title = cleaned_texts[[url]]$title,
+    sentiment = sentiment
+  )
+}
+
+head(sentiment_data[[1]]$sentiment)
+
+# Aggregate Sentiment Scores
+sentiment_scores <- data.frame(
+  url = character(),
+  title = character(),
+  average_sentiment = numeric(),
+  stringsAsFactors = FALSE
+)
+
+for (url in names(sentiment_data)) {
+  article_sentiment <- sentiment_data[[url]]$sentiment
+  avg_sentiment <- mean(article_sentiment$sentiment)
+  
+  sentiment_scores <- rbind(
+    sentiment_scores,
+    data.frame(
+      url = url,
+      title = sentiment_data[[url]]$title,
+      average_sentiment = avg_sentiment,
+      stringsAsFactors = FALSE
+    )
+  )
+)
+
+sentiment_scores
+
+# Visualize Sentiment Scores
+ggplot(sentiment_scores, aes(x = reorder(title, average_sentiment), y = average_sentiment)) +
+  geom_bar(stat = "identity", fill = "steelblue") +
+  coord_flip() +
+  labs(title = "Average Sentiment Scores of Wikipedia Articles on Thai Civil Rights Movements",
+       x = "Article Title",
+       y = "Average Sentiment Score") +
+  theme_minimal()
